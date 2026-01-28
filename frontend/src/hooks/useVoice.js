@@ -259,6 +259,236 @@
 //         isManualMode
 //     };
 // };
+
+
+
+
+// import { useState, useEffect, useCallback } from 'react';
+// import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+// import axios from 'axios';
+
+// // Backend URL - ensure this matches your backend port
+// const BACKEND_URL = 'https://voice-agent-j3at.onrender.com/api/voice';
+
+// export const useVoice = () => {
+//     const [response, setResponse] = useState(null);
+//     const [isProcessing, setIsProcessing] = useState(false);
+//     const [history, setHistory] = useState([]);
+//     const [lastError, setLastError] = useState(null);
+//     const [sessionId] = useState(() => localStorage.getItem('sessionId') || `sess_${Date.now()}`);
+
+//     useEffect(() => {
+//         localStorage.setItem('sessionId', sessionId);
+//     }, [sessionId]);
+
+//     const {
+//         transcript,
+//         listening,
+//         resetTranscript,
+//         browserSupportsSpeechRecognition
+//     } = useSpeechRecognition();
+
+//     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+//     const [isManualMode, setIsManualMode] = useState(false);
+
+//     const speak = useCallback((text) => {
+//         if (!text) return;
+
+//         setIsAiSpeaking(true);
+
+//         const utterance = new SpeechSynthesisUtterance(text);
+//         const voices = window.speechSynthesis.getVoices();
+//         const preferredVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('en-US')) || voices[0];
+//         if (preferredVoice) utterance.voice = preferredVoice;
+
+//         utterance.onend = () => {
+//             setIsAiSpeaking(false);
+//             resetTranscript();
+//             setIsManualMode(true);
+
+//             if (window.followUpTimer) clearTimeout(window.followUpTimer);
+//             window.followUpTimer = setTimeout(() => {
+//                 setIsManualMode(false);
+//             }, 10000);
+//         };
+
+//         utterance.onerror = () => {
+//             setIsAiSpeaking(false);
+//             resetTranscript();
+//         };
+
+//         window.speechSynthesis.speak(utterance);
+//     }, [resetTranscript]);
+
+//     useEffect(() => {
+//         const interval = setInterval(() => {
+//             if (isAiSpeaking && !window.speechSynthesis.speaking) {
+//                 setIsAiSpeaking(false);
+//                 setIsManualMode(true);
+//             }
+//         }, 500);
+//         return () => clearInterval(interval);
+//     }, [isAiSpeaking]);
+
+//     useEffect(() => {
+//         if (listening && transcript) {
+
+//             if (isAiSpeaking) {
+//                 const lower = transcript.toLowerCase();
+//                 const stopWords = ["stop", "wait", "cancel", "hey", "jarvis", "jervis", "no", "wrong", "change", "play", "listen", "start", "open"];
+
+//                 if (stopWords.some(word => lower.includes(word))) {
+//                     cancelSpeech();
+//                 } else {
+//                     if (transcript.length > 200) resetTranscript();
+//                 }
+//                 return;
+//             }
+
+//             if (isProcessing) return;
+
+//             const timer = setTimeout(() => {
+//                 if (transcript.trim().length > 0) {
+//                     const lowerTranscript = transcript.toLowerCase();
+
+//                     if (isManualMode) {
+//                         processInput(true);
+//                         setIsManualMode(false);
+//                     } else {
+//                         if (lowerTranscript.includes("jarvis") || lowerTranscript.includes("jervis")) {
+//                             const parts = lowerTranscript.split(/jarvis|jervis/);
+//                             const command = parts[parts.length - 1].trim();
+
+//                             if (command.length > 2) {
+//                                 processInput(true, command);
+//                             } else {
+//                                 resetTranscript();
+
+//                                 const utterance = new SpeechSynthesisUtterance("Yes?");
+//                                 const voices = window.speechSynthesis.getVoices();
+//                                 const preferredVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('en-US')) || voices[0];
+//                                 if (preferredVoice) utterance.voice = preferredVoice;
+
+//                                 utterance.onend = () => {
+//                                     setIsManualMode(true);
+//                                 };
+
+//                                 window.speechSynthesis.speak(utterance);
+//                             }
+//                         } else {
+//                             if (transcript.length > 100) resetTranscript();
+//                         }
+//                     }
+//                 }
+//             }, 2000);
+
+//             return () => clearTimeout(timer);
+//         }
+//     }, [transcript, listening, isManualMode, isAiSpeaking, isProcessing, resetTranscript]);
+
+//     const processInput = async (inputOver = false, cleanText = null) => {
+//         const textToProcess = cleanText || transcript;
+//         if (!textToProcess) return;
+
+//         setIsProcessing(true);
+//         resetTranscript();
+
+//         try {
+//             setHistory(prev => [...prev, { type: 'user', text: textToProcess }]);
+
+//             const res = await axios.post(BACKEND_URL, {
+//                 text: textToProcess,
+//                 sessionId
+//             });
+
+//             const data = res.data;
+
+//             setHistory(prev => [...prev, { type: 'assistant', text: data.content }]);
+//             setResponse(data);
+
+//             if (data.action === 'openWebpage' && data.payload?.url) {
+//                 try {
+//                     let url = data.payload.url;
+//                     if (!url.startsWith('http')) url = 'https://' + url;
+//                     const newWindow = window.open(url, '_blank');
+//                     if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+//                         throw new Error("Popup blocked");
+//                     }
+//                 } catch (e) {
+//                     speak("I tried to open the page, but your browser blocked the popup. Please allow popups for this site.");
+//                     return;
+//                 }
+//             } else if (data.action === 'clearChat') {
+//                 setHistory([]);
+//                 setResponse(null);
+//             }
+
+//             speak(data.content);
+
+//         } catch (error) {
+//             setLastError(error.message);
+//             speak("Sorry, I encountered an error.");
+//         } finally {
+//             setIsProcessing(false);
+//         }
+//     };
+
+//     // ---------- FIX APPLIED HERE ----------
+//     const toggleListening = () => {
+//         if (listening) {
+//             SpeechRecognition.stopListening();
+//             window.speechSynthesis.cancel();
+//             setIsAiSpeaking(false);
+//             setIsManualMode(false);
+//             return;
+//         }
+
+//         resetTranscript();
+//         setResponse(null);
+//         setLastError(null);
+//         setIsManualMode(true);
+
+//         navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
+//             console.error("Microphone blocked:", err);
+//             alert("Microphone access denied. Enable microphone permissions in browser settings.");
+//         });
+
+//         SpeechRecognition.startListening({
+//             continuous: true,
+//             language: 'en-IN'
+//         });
+//     };
+//     // --------------------------------------
+
+//     const cancelSpeech = () => {
+//         window.speechSynthesis.cancel();
+//         setIsAiSpeaking(false);
+//         resetTranscript();
+//         setIsManualMode(true);
+//     };
+
+//     const stopListening = () => {
+//         SpeechRecognition.stopListening();
+//         window.speechSynthesis.cancel();
+//     };
+
+//     return {
+//         transcript,
+//         listening,
+//         isProcessing,
+//         response,
+//         history,
+//         lastError,
+//         startListening: toggleListening,
+//         stopListening: toggleListening,
+//         cancelSpeech,
+//         browserSupportsSpeechRecognition,
+//         isAiSpeaking,
+//         isManualMode
+//     };
+// };
+
+
 import { useState, useEffect, useCallback } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import axios from 'axios';
@@ -271,7 +501,9 @@ export const useVoice = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [history, setHistory] = useState([]);
     const [lastError, setLastError] = useState(null);
-    const [sessionId] = useState(() => localStorage.getItem('sessionId') || `sess_${Date.now()}`);
+    const [sessionId] = useState(() =>
+        localStorage.getItem('sessionId') || `sess_${Date.now()}`
+    );
 
     useEffect(() => {
         localStorage.setItem('sessionId', sessionId);
@@ -359,16 +591,11 @@ export const useVoice = () => {
                                 processInput(true, command);
                             } else {
                                 resetTranscript();
-
                                 const utterance = new SpeechSynthesisUtterance("Yes?");
                                 const voices = window.speechSynthesis.getVoices();
                                 const preferredVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('en-US')) || voices[0];
                                 if (preferredVoice) utterance.voice = preferredVoice;
-
-                                utterance.onend = () => {
-                                    setIsManualMode(true);
-                                };
-
+                                utterance.onend = () => setIsManualMode(true);
                                 window.speechSynthesis.speak(utterance);
                             }
                         } else {
@@ -410,7 +637,7 @@ export const useVoice = () => {
                     if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
                         throw new Error("Popup blocked");
                     }
-                } catch (e) {
+                } catch {
                     speak("I tried to open the page, but your browser blocked the popup. Please allow popups for this site.");
                     return;
                 }
@@ -429,32 +656,32 @@ export const useVoice = () => {
         }
     };
 
-    // ---------- FIX APPLIED HERE ----------
+    // FIX: Only start speech recognition via user click gesture
     const toggleListening = () => {
         if (listening) {
             SpeechRecognition.stopListening();
             window.speechSynthesis.cancel();
             setIsAiSpeaking(false);
             setIsManualMode(false);
-            return;
+        } else {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(() => {
+                    resetTranscript();
+                    setResponse(null);
+                    setLastError(null);
+                    setIsManualMode(true);
+
+                    SpeechRecognition.startListening({
+                        continuous: true,
+                        language: 'en-IN'
+                    });
+                })
+                .catch(err => {
+                    console.error("Microphone blocked:", err);
+                    alert("Microphone access denied. Enable microphone in browser settings.");
+                });
         }
-
-        resetTranscript();
-        setResponse(null);
-        setLastError(null);
-        setIsManualMode(true);
-
-        navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
-            console.error("Microphone blocked:", err);
-            alert("Microphone access denied. Enable microphone permissions in browser settings.");
-        });
-
-        SpeechRecognition.startListening({
-            continuous: true,
-            language: 'en-IN'
-        });
     };
-    // --------------------------------------
 
     const cancelSpeech = () => {
         window.speechSynthesis.cancel();
