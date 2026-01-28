@@ -285,6 +285,7 @@ export const useVoice = () => {
     } = useSpeechRecognition();
 
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+    const [isManualMode, setIsManualMode] = useState(false);
 
     const speak = useCallback((text) => {
         if (!text) return;
@@ -324,8 +325,6 @@ export const useVoice = () => {
         }, 500);
         return () => clearInterval(interval);
     }, [isAiSpeaking]);
-
-    const [isManualMode, setIsManualMode] = useState(false);
 
     useEffect(() => {
         if (listening && transcript) {
@@ -430,28 +429,32 @@ export const useVoice = () => {
         }
     };
 
-    // *** FIX: only start mic on user action ***
+    // ---------- FIX APPLIED HERE ----------
     const toggleListening = () => {
         if (listening) {
             SpeechRecognition.stopListening();
             window.speechSynthesis.cancel();
             setIsAiSpeaking(false);
             setIsManualMode(false);
-        } else {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(() => {
-                    resetTranscript();
-                    setResponse(null);
-                    setLastError(null);
-                    setIsManualMode(true);
-                    SpeechRecognition.startListening({ continuous: true, language: 'en-IN' });
-                })
-                .catch(err => {
-                    console.error("Microphone blocked:", err);
-                    alert("Microphone access denied. Enable microphone permissions in browser settings.");
-                });
+            return;
         }
+
+        resetTranscript();
+        setResponse(null);
+        setLastError(null);
+        setIsManualMode(true);
+
+        navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
+            console.error("Microphone blocked:", err);
+            alert("Microphone access denied. Enable microphone permissions in browser settings.");
+        });
+
+        SpeechRecognition.startListening({
+            continuous: true,
+            language: 'en-IN'
+        });
     };
+    // --------------------------------------
 
     const cancelSpeech = () => {
         window.speechSynthesis.cancel();
