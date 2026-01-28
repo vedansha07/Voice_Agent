@@ -109,7 +109,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({
     origin: [
         "https://voice-agent-fawn.vercel.app",
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "http://localhost:4173",
+        "http://localhost:4174"
     ],
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type"],
