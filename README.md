@@ -4,14 +4,15 @@ A fully Agentic Voice Assistant that allows "Hands-Free" interaction using the *
 
 ## 🚀 Features
 - 🎙️ **Hands-Free Activation**: Just say **"Jarvis"** to wake it up. No clicking required.
-- 🗣️ **Continuous Conversation**: Includes a **10-second Follow-Up Window** where you can reply naturally without the wake word.
-- 🚦 **Smart Barge-In**: You can interrupt the AI at any time by saying "Stop", "Wait", etc.
-- 🧠 **AI Intelligence**: Powered by **Groq (Llama 3)** for ultra-fast, near-instant responses.
-- 🌐 **Browser Control**: Can open websites (YouTube, Google, Weather) directly.
-- 🔊 **Visual Feedback**: Real-time transcriptions that filter out the AI's own voice.
+- 🎨 **Modern Dark UI**: Immersive dark theme with a pulsing concentric circle visualizer.
+- 🚦 **Control Bar**: Easy access to Stop, Mic, and Chat toggles.
+- 💬 **Chat Drawer**: Slide-out panel to view conversation history.
+- 🗣️ **Continuous Conversation**: Includes a **10-second Follow-Up Window**.
+- 🧠 **AI Intelligence**: Powered by **Groq (Llama 3)** for ultra-fast responses.
+- 🌐 **Browser Control**: Can open websites (YouTube, Google) directly.
 
 ## 🛠️ Tech Stack
-- **Frontend**: React, Vite, TailwindCSS, `react-speech-recognition`, `axios`.
+- **Frontend**: React, Vite, TailwindCSS, `framer-motion`, `lucide-react`.
 - **Backend**: Node.js, Express, `groq-sdk` (Llama 3.3 70B).
 
 ## 📦 Setup & Installation
@@ -39,14 +40,18 @@ npm run dev
 The frontend will run on `http://localhost:5173`.
 
 ## 🎮 Usage Guide
-1. **Initial Setup**: Open the frontend URL. Allow Microphone and **Popups** (crucial for opening tabs).
-2. **Wake Word**: Say **"Jarvis"**. The status text will change to "Direct Command Mode".
+1. **Initial Setup**: Open the frontend URL. Allow Microphone and **Popups**.
+2. **Wake Word**: Say **"Jarvis"** to wake it up. The status text will change to "Say 'Jarvis' to wake" or "Direct Command Mode".
+3. **Visuals**: Watch the blue rings pulse when the AI listens or speaks.
 3. **Commands**:
    - *"Jarvis, how are you?"*
    - *"Open YouTube"*
    - *"Search for weather in Tokyo"*
-   - *"Reset chat"*
-4. **Follow-Up**: After the AI answers, you have 10 seconds to say another command *without* saying Jarvis.
+    - *"Reset chat"*
+4. **Interruption**:
+    - Say **"Stop"**, **"Wait"**, or **"Cancel"** to interrupt.
+    - Or press the **Red Stop Button** in the control bar.
+5. **Chat History**: Click the **Message Bubble** icon to view past conversations.
 
 ## ⚠️ Troubleshooting
 - **Microphone not starting?** Click the mic button once to initialize permissions.

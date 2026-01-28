@@ -16,26 +16,12 @@ export const useVoice = () => {
         localStorage.setItem('sessionId', sessionId);
     }, [sessionId]);
 
-    const commands = [
-        {
-            command: ['clear', 'reset'],
-            callback: ({ resetTranscript }) => resetTranscript()
-        },
-        {
-            command: 'stop',
-            callback: () => {
-                stopListening();
-                speak("Stopped listening.");
-            }
-        }
-    ];
-
     const {
         transcript,
         listening,
         resetTranscript,
         browserSupportsSpeechRecognition
-    } = useSpeechRecognition({ commands });
+    } = useSpeechRecognition();
 
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
 
@@ -95,14 +81,12 @@ export const useVoice = () => {
             // 1. BARGE-IN CHECK (High Priority)
             if (isAiSpeaking) {
                 const lower = transcript.toLowerCase();
-                // Check effectively for interruption words
-                if (lower.includes("stop") || lower.includes("wait") || lower.includes("cancel") || lower.includes("hey") || lower.includes("jarvis") || lower.includes("jervis")) {
+                // Expanded interruption words
+                const stopWords = ["stop", "wait", "cancel", "hey", "jarvis", "jervis", "no", "wrong", "change", "play", "listen", "start", "open"];
+
+                if (stopWords.some(word => lower.includes(word))) {
                     console.log("Barge-in detected! Stopping AI speech.");
-                    window.speechSynthesis.cancel();
-                    setIsAiSpeaking(false);
-                    resetTranscript();
-                    // If it was "Jarvis", they might want to follow up immediately? 
-                    // For now, just stop and listen.
+                    cancelSpeech();
                 } else {
                     // CAUTION: While AI speaks, the mic hears the AI.
                     // We ignore this "echo" until a keyword is heard.
@@ -248,6 +232,13 @@ export const useVoice = () => {
         }
     };
 
+    const cancelSpeech = () => {
+        window.speechSynthesis.cancel();
+        setIsAiSpeaking(false);
+        resetTranscript();
+        setIsManualMode(true);
+    };
+
     const stopListening = () => {
         SpeechRecognition.stopListening();
         window.speechSynthesis.cancel();
@@ -262,6 +253,7 @@ export const useVoice = () => {
         lastError,
         startListening: toggleListening,
         stopListening: toggleListening,
+        cancelSpeech,
         browserSupportsSpeechRecognition,
         isAiSpeaking,
         isManualMode

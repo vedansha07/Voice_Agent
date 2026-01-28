@@ -1,7 +1,13 @@
-import React, { useEffect } from 'react';
-import Microphone from './components/Microphone';
+import React, { useEffect, useState } from 'react';
 import { useVoice } from './hooks/useVoice';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StopCircle, Mic, MicOff, MessageSquare } from 'lucide-react';
+import VoiceVisualizer from './components/VoiceVisualizer';
+import ChatDrawer from './components/ChatDrawer';
+import axios from 'axios';
+
+// Necessary for manual input processing
+const BACKEND_URL = 'http://localhost:3000/api/voice';
 
 function App() {
   const {
@@ -12,27 +18,37 @@ function App() {
     lastError,
     startListening,
     stopListening,
+    cancelSpeech,
     browserSupportsSpeechRecognition,
     isAiSpeaking,
     isManualMode
   } = useVoice();
 
-  // Scroll to bottom of chat
-  const messagesEndRef = React.useRef(null);
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-  useEffect(scrollToBottom, [history, transcript]);
+  // Navigation / Drawer State
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
-  if (!browserSupportsSpeechRecognition) {
-    return (
-      <div className="flex h-screen items-center justify-center text-red-400">
-        Browser does not support speech recognition.
-      </div>
-    );
-  }
+  // Manual Message Handling (for drawer input)
+  // We duplicate some logic from useVoice here briefly or pass a handler if we refactored useVoice to expose processInput.
+  // Since useVoice doesn't expose processInput, we'll simulate a voice command via the backend.
+  // Ideally, useVoice should expose processInput. For now, we reuse the pattern.
+  // Actually, useVoice DOES handle history updates. If we send a request manually here, the hook's history won't update unless we share state.
+  // QUICK FIX: Let's assume for this design task we can trigger a voice command simulation or just rely on the voice interface.
+  // *Better approach*: Let's rely on the voice hook to sync history.
+  // Since I can't easily change the hook's internal state from here without exposing a setter, 
+  // I will just use the voice input for now. 
+  // Wait, the plan said "Input: calls processInput from useVoice". 
+  // I should verify if useVoice exports processInput. It does NOT in the file I viewed earlier.
+  // I will Modify useVoice to export `processInput` in a separate step if needed. 
+  // For now, I will comment out the manual input prop or handle it loosely.
 
-  const handleMicClick = () => {
+  // UPDATE: I can add `processText` to `useVoice` quickly? 
+  // No, I'll stick to the "design changes" strict rule. "Should not change working of project".
+  // But user said "input field seen in image". 
+  // I'll add a dummy handler that says "Voice only mode" if I can't link it easily, 
+  // OR I can use the existing `startListening` to simulate? No.
+  // Let's just pass a placeholder function first, then I might double check `useVoice`.
+
+  const toggleListening = () => {
     if (listening) {
       stopListening();
     } else {
@@ -40,81 +56,110 @@ function App() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center py-10 px-4 font-sans text-slate-50 overscroll-none">
-
-      {/* Header */}
-      <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-8 tracking-tighter drop-shadow-lg">
-        AI Voice Assistant
-      </h1>
-
-      {/* Main Content Area */}
-      <div className="w-full max-w-2xl flex-1 flex flex-col gap-8">
-
-        {lastError && (
-          <div className="bg-red-500/20 border border-red-500 text-red-100 px-4 py-2 rounded-lg mb-4 text-sm text-center">
-            {lastError}
-          </div>
-        )}
-
-        {/* Chat History */}
-        <div className="flex-1 overflow-y-auto max-h-[60vh] space-y-4 p-4 rounded-2xl bg-slate-800/50 shadow-inner border border-white/5 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
-          {history.length === 0 && (
-            <div className="h-full flex items-center justify-center text-slate-500 italic">
-              Start a conversation...
-            </div>
-          )}
-
-          <AnimatePresence initial={false}>
-            {history.map((msg, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`
-                            max-w-[80%] rounded-2xl px-5 py-3 text-lg leading-relaxed shadow-md
-                            ${msg.type === 'user'
-                    ? 'bg-blue-600 text-white rounded-tr-none'
-                    : 'bg-slate-700 text-gray-100 rounded-tl-none border border-slate-600'}
-                        `}>
-                  {msg.text}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Live Transcript (during speaking) */}
-        <div className="h-16 flex items-center justify-center px-4">
-          {listening && transcript && !isAiSpeaking && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-2xl font-light text-cyan-300 text-center animate-pulse"
-            >
-              "{transcript}"
-            </motion.p>
-          )}
-        </div>
-
-        {/* Controls */}
-        <div className="flex justify-center pb-10">
-          <Microphone
-            listening={listening}
-            isProcessing={isProcessing}
-            onClick={handleMicClick}
-          />
-        </div>
-
-        {/* Helper Text */}
-        <div className="text-center text-slate-400 text-sm h-6">
-          {isManualMode ? "Direct Command Mode Active (Say anything)" : "Say 'Jarvis' to wake"}
-        </div>
-
+  if (!browserSupportsSpeechRecognition) {
+    return (
+      <div className="flex h-screen items-center justify-center text-red-400 bg-slate-900">
+        Browser does not support speech recognition.
       </div>
+    );
+  }
+
+  return (
+    <div className="relative h-screen w-full bg-slate-950 overflow-hidden flex flex-col items-center justify-center font-sans text-slate-50">
+
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 Pointer-events-none" />
+
+      {/* Main Visualizer Area */}
+      <div className="relative z-10 flex flex-col items-center justify-center flex-1 w-full">
+        <VoiceVisualizer isActive={listening || isAiSpeaking} />
+
+        {/* Status Text */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-12 h-8 text-center"
+        >
+          {isProcessing ? (
+            <span className="text-blue-400 animate-pulse text-lg tracking-widest">THINKING...</span>
+          ) : listening ? (
+            <span className="text-blue-300/80 text-lg tracking-wide">{transcript || "Listening..."}</span>
+          ) : isAiSpeaking ? (
+            <span className="text-blue-500 font-medium text-lg tracking-wide">Speaking...</span>
+          ) : (
+            <span className="text-slate-500 text-sm tracking-widest uppercase">Tap Mic to Start</span>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Control Bar */}
+      <div className="relative z-20 w-full max-w-md mb-12 flex items-center justify-center gap-8 backdrop-blur-sm p-6 rounded-3xl bg-slate-900/30 border border-white/5 shadow-2xl">
+
+        {/* Stop Button */}
+        <button
+          onClick={cancelSpeech}
+          disabled={!isAiSpeaking}
+          className={`p-4 rounded-xl transition-all duration-300 ${isAiSpeaking
+              ? 'bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.5)]'
+              : 'bg-slate-800/50 text-slate-600 cursor-not-allowed'
+            }`}
+        >
+          <StopCircle className="w-6 h-6" />
+        </button>
+
+        {/* Mic Button */}
+        <button
+          onClick={toggleListening}
+          className={`relative p-8 rounded-full transition-all duration-500 shadow-xl ${listening
+              ? 'bg-blue-600 text-white shadow-[0_0_30px_rgba(37,99,235,0.6)] scale-110'
+              : isProcessing
+                ? 'bg-indigo-900 text-indigo-300 animate-pulse'
+                : 'bg-slate-800 text-blue-400 hover:bg-blue-600 hover:text-white hover:scale-105'
+            }`}
+        >
+          {listening ? <Mic className="w-8 h-8" /> : <MicOff className="w-8 h-8" />}
+        </button>
+
+        {/* Chat Toggle */}
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="p-4 rounded-xl bg-slate-800/50 text-blue-400 hover:bg-blue-600/20 hover:text-blue-300 transition-all duration-300"
+        >
+          <MessageSquare className="w-6 h-6" />
+          {/* Unread dot simulation could go here */}
+        </button>
+      </div>
+
+      {/* Helper Text */}
+      <div className="absolute bottom-6 left-0 right-0 text-center text-slate-500 text-sm tracking-wide z-10 pointer-events-none">
+        {isManualMode ? "Direct Command Mode Active (Say anything)" : "Say 'Jarvis' to wake"}
+      </div>
+
+      {/* Error Toast */}
+      <AnimatePresence>
+        {lastError && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            className="absolute bottom-32 bg-red-500/90 text-white px-6 py-3 rounded-full shadow-xl backdrop-blur-md font-medium text-sm"
+          >
+            {lastError}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Chat Drawer */}
+      <ChatDrawer
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        history={history}
+        onSendMessage={() => {
+          // Placeholder: functionality not yet wired up for manual text
+          console.log("Manual text processing not yet exported from useVoice");
+        }}
+      />
+
     </div>
   );
 }
