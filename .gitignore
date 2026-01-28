@@ -1,0 +1,6 @@
+# ignore env files globally
+*.env
+.env
+
+# ignore node garbage
+node_modules/
