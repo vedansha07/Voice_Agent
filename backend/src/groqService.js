@@ -59,7 +59,6 @@ const generateResponse = async (userText, history = []) => {
     }
 
     // Convert history from Gemini format to Groq/OpenAI format if needed
-    // Gemini: { role: 'user', parts: [{ text: '...' }] }
     // Groq: { role: 'user', content: '...' }
 
     const formattedHistory = history.map(msg => {
