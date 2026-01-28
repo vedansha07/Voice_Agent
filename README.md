@@ -1,4 +1,4 @@
-# AI Voice Assistant 2.0 (Hands-Free edition)
+# AI Voice Assistant
 
 A fully Agentic Voice Assistant that allows "Hands-Free" interaction using the **"Jarvis"** wake word. It controls the browser, speaks naturally, and handles interruptions.
 
