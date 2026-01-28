@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send } from 'lucide-react';
+import { X } from 'lucide-react';
 
-const ChatDrawer = ({ isOpen, onClose, history, onSendMessage }) => {
-    const [inputValue, setInputValue] = useState("");
+const ChatDrawer = ({ isOpen, onClose, history }) => {
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -16,13 +15,7 @@ const ChatDrawer = ({ isOpen, onClose, history, onSendMessage }) => {
         }
     }, [history, isOpen]);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (inputValue.trim()) {
-            onSendMessage(inputValue);
-            setInputValue("");
-        }
-    };
+
 
     return (
         <AnimatePresence>
@@ -71,25 +64,7 @@ const ChatDrawer = ({ isOpen, onClose, history, onSendMessage }) => {
                             <div ref={messagesEndRef} />
                         </div>
 
-                        {/* Input Area */}
-                        <form onSubmit={handleSubmit} className="p-4 border-t border-slate-800 bg-slate-900">
-                            <div className="relative flex items-center">
-                                <input
-                                    type="text"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder="Type a message..."
-                                    className="w-full bg-slate-800 text-white rounded-full py-3 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all border border-transparent focus:border-blue-500"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={!inputValue.trim()}
-                                    className="absolute right-2 p-2 bg-blue-600 rounded-full hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    <Send className="w-4 h-4 text-white" />
-                                </button>
-                            </div>
-                        </form>
+
                     </motion.div>
                 </>
             )}

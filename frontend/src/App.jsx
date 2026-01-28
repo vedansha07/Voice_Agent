@@ -4,10 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { StopCircle, Mic, MicOff, MessageSquare } from 'lucide-react';
 import VoiceVisualizer from './components/VoiceVisualizer';
 import ChatDrawer from './components/ChatDrawer';
-import axios from 'axios';
 
-// Necessary for manual input processing
-const BACKEND_URL = 'http://localhost:3000/api/voice';
 
 function App() {
   const {
@@ -27,26 +24,7 @@ function App() {
   // Navigation / Drawer State
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Manual Message Handling (for drawer input)
-  // We duplicate some logic from useVoice here briefly or pass a handler if we refactored useVoice to expose processInput.
-  // Since useVoice doesn't expose processInput, we'll simulate a voice command via the backend.
-  // Ideally, useVoice should expose processInput. For now, we reuse the pattern.
-  // Actually, useVoice DOES handle history updates. If we send a request manually here, the hook's history won't update unless we share state.
-  // QUICK FIX: Let's assume for this design task we can trigger a voice command simulation or just rely on the voice interface.
-  // *Better approach*: Let's rely on the voice hook to sync history.
-  // Since I can't easily change the hook's internal state from here without exposing a setter, 
-  // I will just use the voice input for now. 
-  // Wait, the plan said "Input: calls processInput from useVoice". 
-  // I should verify if useVoice exports processInput. It does NOT in the file I viewed earlier.
-  // I will Modify useVoice to export `processInput` in a separate step if needed. 
-  // For now, I will comment out the manual input prop or handle it loosely.
 
-  // UPDATE: I can add `processText` to `useVoice` quickly? 
-  // No, I'll stick to the "design changes" strict rule. "Should not change working of project".
-  // But user said "input field seen in image". 
-  // I'll add a dummy handler that says "Voice only mode" if I can't link it easily, 
-  // OR I can use the existing `startListening` to simulate? No.
-  // Let's just pass a placeholder function first, then I might double check `useVoice`.
 
   const toggleListening = () => {
     if (listening) {
@@ -100,8 +78,8 @@ function App() {
           onClick={cancelSpeech}
           disabled={!isAiSpeaking}
           className={`p-4 rounded-xl transition-all duration-300 ${isAiSpeaking
-              ? 'bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.5)]'
-              : 'bg-slate-800/50 text-slate-600 cursor-not-allowed'
+            ? 'bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.5)]'
+            : 'bg-slate-800/50 text-slate-600 cursor-not-allowed'
             }`}
         >
           <StopCircle className="w-6 h-6" />
@@ -111,10 +89,10 @@ function App() {
         <button
           onClick={toggleListening}
           className={`relative p-8 rounded-full transition-all duration-500 shadow-xl ${listening
-              ? 'bg-blue-600 text-white shadow-[0_0_30px_rgba(37,99,235,0.6)] scale-110'
-              : isProcessing
-                ? 'bg-indigo-900 text-indigo-300 animate-pulse'
-                : 'bg-slate-800 text-blue-400 hover:bg-blue-600 hover:text-white hover:scale-105'
+            ? 'bg-blue-600 text-white shadow-[0_0_30px_rgba(37,99,235,0.6)] scale-110'
+            : isProcessing
+              ? 'bg-indigo-900 text-indigo-300 animate-pulse'
+              : 'bg-slate-800 text-blue-400 hover:bg-blue-600 hover:text-white hover:scale-105'
             }`}
         >
           {listening ? <Mic className="w-8 h-8" /> : <MicOff className="w-8 h-8" />}
@@ -154,10 +132,6 @@ function App() {
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         history={history}
-        onSendMessage={() => {
-          // Placeholder: functionality not yet wired up for manual text
-          console.log("Manual text processing not yet exported from useVoice");
-        }}
       />
 
     </div>
