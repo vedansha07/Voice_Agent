@@ -285,8 +285,19 @@ export const useVoice = () => {
         transcript,
         listening,
         resetTranscript,
-        browserSupportsSpeechRecognition
+        browserSupportsSpeechRecognition,
+        isMicrophoneAvailable,
+        error: speechError // Capture error
     } = useSpeechRecognition();
+
+    // Debug Logging for Speech Errors
+    useEffect(() => {
+        if (speechError) {
+            console.error("Speech Recognition Error:", speechError);
+            setLastError(`Mic Error: ${JSON.stringify(speechError)}`);
+        }
+    }, [speechError]);
+
 
     const [isAiSpeaking, setIsAiSpeaking] = useState(false);
     const [isManualMode, setIsManualMode] = useState(false);
