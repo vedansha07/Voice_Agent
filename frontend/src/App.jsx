@@ -113,14 +113,7 @@ function App() {
         {isManualMode ? "Direct Command Mode Active (Say anything)" : "Say 'Jarvis' to wake"}
       </div>
 
-      {/* Debug Panel - TEMPORARY */}
-      <div className="absolute top-4 left-4 z-50 p-4 bg-black/80 text-green-400 font-mono text-xs rounded border border-green-900 pointer-events-none">
-        <div>State: {listening ? "LISTENING" : "IDLE"}</div>
-        <div>Manual: {isManualMode.toString()}</div>
-        <div>Mic: {browserSupportsSpeechRecognition ? "Supported" : "UNSUPPORTED"}</div>
-        <div>Err: {lastError || "None"}</div>
-        <div className="max-w-[200px] truncate">Tx: {transcript}</div>
-      </div>
+
 
       {/* Error Toast */}
       <AnimatePresence>

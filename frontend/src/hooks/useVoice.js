@@ -45,8 +45,6 @@ export const useVoice = () => {
         recognition.onend = () => {
             console.log("Mic stopped");
             setListening(false);
-            // Auto-restart if in "Wake Word" mode (unless processing or speaking)
-            // But for this simple version, we stick to manual toggle or careful restarts
         };
 
         recognition.onresult = (event) => {
@@ -63,8 +61,8 @@ export const useVoice = () => {
 
         recognition.onerror = (event) => {
             console.error("Speech Error:", event.error);
-            setLastError(`Mic Error: ${event.error}`);
-            if (event.error === 'not-allowed') {
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                setLastError(`Mic Error: ${event.error}`);
                 setListening(false);
             }
         };
@@ -76,9 +74,23 @@ export const useVoice = () => {
         };
     }, []);
 
+    const stopRecognition = () => {
+        if (recognitionRef.current) recognitionRef.current.stop();
+    };
+
+    const startRecognition = () => {
+        setTranscript("");
+        try {
+            recognitionRef.current?.start();
+        } catch (e) {
+            console.error("Start error:", e);
+        }
+    };
+
     const speak = useCallback((text) => {
         if (!text) return;
         setIsAiSpeaking(true);
+        stopRecognition(); // Stop listening while talking to prevent ECHO
 
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
@@ -87,31 +99,20 @@ export const useVoice = () => {
 
         utterance.onend = () => {
             setIsAiSpeaking(false);
-            setTranscript("");
-            // setTranscript is safe here as native API doesn't reset automatically on speak
             setIsManualMode(true);
+            startRecognition(); // Restart listening after speech ends
+
             if (window.followUpTimer) clearTimeout(window.followUpTimer);
             window.followUpTimer = setTimeout(() => setIsManualMode(false), 10000);
         };
 
         utterance.onerror = () => {
             setIsAiSpeaking(false);
-            setTranscript("");
+            startRecognition();
         };
 
         window.speechSynthesis.speak(utterance);
     }, []);
-
-    // Barge-in Logic
-    useEffect(() => {
-        if (listening && transcript && isAiSpeaking) {
-            const lower = transcript.toLowerCase();
-            const stopWords = ["stop", "wait", "cancel", "hey", "jarvis"];
-            if (stopWords.some(word => lower.includes(word))) {
-                cancelSpeech();
-            }
-        }
-    }, [transcript, listening, isAiSpeaking]);
 
     // Command Processing Logic
     useEffect(() => {
@@ -123,7 +124,6 @@ export const useVoice = () => {
 
                 if (isManualMode) {
                     processInput(true);
-                    setIsManualMode(false);
                 } else {
                     // Wake Word logic
                     if (lower.includes("jarvis")) {
@@ -133,11 +133,16 @@ export const useVoice = () => {
                             processInput(true, command);
                         } else {
                             // Wake word only
+                            stopRecognition();
                             setTranscript("");
-                            speak("Yes?");
+                            const utterance = new SpeechSynthesisUtterance("Yes?");
+                            utterance.onend = () => {
+                                setIsManualMode(true);
+                                startRecognition();
+                            };
+                            window.speechSynthesis.speak(utterance);
                         }
                     } else {
-                        // Reset if no wake word and too long
                         if (transcript.length > 100) setTranscript("");
                     }
                 }
@@ -153,13 +158,12 @@ export const useVoice = () => {
         if (!textToProcess) return;
 
         setIsProcessing(true);
-        // Do not reset transcript immediately to allow UI to show it? 
-        // Actually, native API retains history. better clear it manually.
-        setTranscript("");
+        stopRecognition(); // Stop mic immediately
 
         try {
             setHistory(prev => [...prev, { type: 'user', text: textToProcess }]);
 
+            console.log("Sending to backend:", textToProcess);
             const res = await axios.post(BACKEND_URL, {
                 text: textToProcess,
                 sessionId
@@ -178,6 +182,7 @@ export const useVoice = () => {
             speak(data.content);
 
         } catch (error) {
+            console.error("Backend Error:", error);
             setLastError(error.message);
             speak("Sorry, something went wrong.");
         } finally {
@@ -187,16 +192,10 @@ export const useVoice = () => {
 
     const toggleListening = () => {
         if (listening) {
-            recognitionRef.current?.stop();
-            // setListening(false) handles in onend
+            stopRecognition();
         } else {
-            setTranscript("");
-            setLastError(null);
-            try {
-                recognitionRef.current?.start();
-            } catch (e) {
-                console.error("Start error:", e); // Handle 'already started'
-            }
+            setIsManualMode(true);
+            startRecognition();
         }
     };
 
@@ -205,6 +204,7 @@ export const useVoice = () => {
         setIsAiSpeaking(false);
         setTranscript("");
         setIsManualMode(true);
+        startRecognition();
     };
 
     return {
