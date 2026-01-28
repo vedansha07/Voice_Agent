@@ -3,7 +3,7 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 import axios from 'axios';
 
 // Backend URL - ensure this matches your backend port
-const BACKEND_URL = 'http://localhost:3000/api/voice';
+const BACKEND_URL = 'https://voice-agent-j3at.onrender.com/api/voice';
 
 export const useVoice = () => {
     const [response, setResponse] = useState(null);
