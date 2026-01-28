@@ -5,7 +5,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { initGroq, generateResponse } = require('./groqService');
+const { initGroq, generateResponse, handleToolOutput } = require('./groqService');
 const { executeCommand } = require('./commandDispatcher');
 
 const app = express();
@@ -16,9 +16,9 @@ app.use(cors());
 app.use(express.json());
 
 // Request logging middleware
+// Request logging middleware
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    console.log('Body:', JSON.stringify(req.body).substring(0, 100) + '...');
     next();
 });
 
@@ -61,39 +61,7 @@ app.post('/api/voice', async (req, res) => {
 
                 if (actionResult) {
                     console.log(`[Server] Action result:`, actionResult);
-
-                    // Re-prompt the LLM with the tool output
-                    const toolOutputMessage = `
-                 System Tool Output for action '${geminiResponse.action}':
-                 ${JSON.stringify(actionResult)}
-                 
-                 Instruction: Generate a JSON response { "type": "reply", "content": "...", "action": "none", "payload": {} } to answer the user based on this tool output.
-                 `;
-
-                    console.log("[Server] Re-prompting LLM with tool output...");
-                    const followUpHistory = [
-                        ...history,
-                        { role: 'user', content: text },
-                        { role: 'assistant', content: JSON.stringify(geminiResponse) },
-                        { role: 'user', content: toolOutputMessage }
-                    ];
-
-                    try {
-                        // Get final natural language response
-                        const finalResponse = await generateResponse("Generate final response", followUpHistory);
-                        console.log("[Server] Final response received");
-                        // Use the final response for the user
-                        geminiResponse = finalResponse;
-                    } catch (rePromptError) {
-                        console.error("[Server] Re-prompt failed:", rePromptError);
-                        // Fallback if re-prompt fails
-                        geminiResponse = {
-                            type: "reply",
-                            content: "I have the data but couldn't generate a summary. Please check the logs.",
-                            action: "none",
-                            payload: {}
-                        };
-                    }
+                    geminiResponse = await handleToolOutput(text, history, geminiResponse.action, actionResult);
                 }
             }
         }

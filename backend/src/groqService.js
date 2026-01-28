@@ -11,7 +11,7 @@ const initGroq = (apiKey) => {
         console.warn("CRITICAL: GROQ API Key is missing!");
         return;
     }
-    console.log("Groq Service initialized with API Key: " + apiKey.substring(0, 5) + "...");
+    console.log("Groq Service initialized");
     groq = new Groq({ apiKey });
 };
 
@@ -89,7 +89,7 @@ const generateResponse = async (userText, history = []) => {
 
         const completion = await groq.chat.completions.create({
             messages: validMessages,
-            model: "llama-3.3-70b-versatile", // Reverting to check if rate limit reset
+            model: "llama-3.3-70b-versatile",
             temperature: 0.6,
             max_tokens: 1024,
             response_format: { type: "json_object" },
@@ -121,4 +121,38 @@ const generateResponse = async (userText, history = []) => {
     }
 };
 
-module.exports = { initGroq, generateResponse };
+const handleToolOutput = async (originalText, history, action, actionResult) => {
+    const toolOutputMessage = `
+System Tool Output for action '${action}':
+${JSON.stringify(actionResult)}
+
+Instruction: Generate a JSON response { "type": "reply", "content": "...", "action": "none", "payload": {} } to answer the user based on this tool output.
+`;
+
+    console.log("[GroqService] Re-prompting LLM with tool output...");
+
+    // Construct new history for the follow-up
+    // Note: We need to respect the format expected by generateResponse
+    const followUpHistory = [
+        ...history,
+        { role: 'user', content: originalText },
+        { role: 'assistant', content: JSON.stringify({ action, payload: {} }) }, // Minimal representation of previous turn
+        { role: 'user', content: toolOutputMessage }
+    ];
+
+    try {
+        const finalResponse = await generateResponse("Generate final response", followUpHistory);
+        console.log("[GroqService] Final response received");
+        return finalResponse;
+    } catch (error) {
+        console.error("[GroqService] Re-prompt failed:", error);
+        return {
+            type: "reply",
+            content: "I have the data but couldn't generate a summary. Please check the logs.",
+            action: "none",
+            payload: {}
+        };
+    }
+};
+
+module.exports = { initGroq, generateResponse, handleToolOutput };

@@ -18,14 +18,14 @@ const Microphone = ({ listening, isProcessing, onClick }) => {
             <button
                 onClick={onClick}
                 className={`
-                relative z-10 p-8 rounded-full transition-all duration-300 shadow-xl border-4
-                ${listening
+                    relative z-10 p-8 rounded-full transition-all duration-300 shadow-xl border-4
+                    ${listening
                         ? 'bg-red-500 border-red-400 shadow-red-500/50 scale-105'
                         : isProcessing
                             ? 'bg-gray-700 border-gray-600'
                             : 'bg-indigo-600 border-indigo-400 hover:bg-indigo-500 hover:scale-105 shadow-indigo-500/50'
                     }
-            `}
+                `}
             >
                 {isProcessing ? (
                     <Loader2 className="w-12 h-12 text-white animate-spin" />
@@ -33,7 +33,6 @@ const Microphone = ({ listening, isProcessing, onClick }) => {
                     <div className="animate-pulse">
                         <Mic className="w-12 h-12 text-white" />
                     </div>
-
                 ) : (
                     <Mic className="w-12 h-12 text-white" />
                 )}
