@@ -8,9 +8,13 @@ const express = require('express');
 const cors = require('cors');
 const { initGroq, generateResponse, handleToolOutput } = require('./groqService');
 const { executeCommand } = require('./commandDispatcher');
+const keepAlive = require('./keepAlive');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+keepAlive(app);
 
 // Proper CORS for Vercel + Local Dev
 app.use(cors({
