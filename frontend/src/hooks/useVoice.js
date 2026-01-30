@@ -17,6 +17,7 @@ export const useVoice = () => {
     const [isManualMode, setIsManualMode] = useState(false);
 
     const recognitionRef = useRef(null);
+    const isIntentionalStop = useRef(false); // Track if we stopped it on purpose
 
     // Browser Support Check
     const browserSupportsSpeechRecognition = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -43,8 +44,18 @@ export const useVoice = () => {
         };
 
         recognition.onend = () => {
-            console.log("Mic stopped");
+            console.log("Mic stopped. Intentional:", isIntentionalStop.current);
             setListening(false);
+
+            // If we didn't stop it on purpose, restart it
+            if (!isIntentionalStop.current) {
+                console.log("Restarting mic...");
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error("Failed to auto-restart:", e);
+                }
+            }
         };
 
         recognition.onresult = (event) => {
@@ -63,6 +74,7 @@ export const useVoice = () => {
             console.error("Speech Error:", event.error);
             if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
                 setLastError(`Mic Error: ${event.error}`);
+                isIntentionalStop.current = true; // Stop retrying if permission denied
                 setListening(false);
             }
         };
@@ -70,16 +82,23 @@ export const useVoice = () => {
         recognitionRef.current = recognition;
 
         return () => {
-            if (recognitionRef.current) recognitionRef.current.stop();
+            if (recognitionRef.current) {
+                isIntentionalStop.current = true;
+                recognitionRef.current.stop();
+            }
         };
     }, []);
 
     const stopRecognition = () => {
-        if (recognitionRef.current) recognitionRef.current.stop();
+        if (recognitionRef.current) {
+            isIntentionalStop.current = true;
+            recognitionRef.current.stop();
+        }
     };
 
     const startRecognition = () => {
         setTranscript("");
+        isIntentionalStop.current = false;
         try {
             recognitionRef.current?.start();
         } catch (e) {
@@ -99,8 +118,9 @@ export const useVoice = () => {
 
         utterance.onend = () => {
             setIsAiSpeaking(false);
+            // After speaking, we want to listen again, likely for a follow-up
             setIsManualMode(true);
-            startRecognition(); // Restart listening after speech ends
+            startRecognition();
 
             if (window.followUpTimer) clearTimeout(window.followUpTimer);
             window.followUpTimer = setTimeout(() => setIsManualMode(false), 10000);
@@ -129,20 +149,28 @@ export const useVoice = () => {
                     if (lower.includes("jarvis")) {
                         const parts = lower.split("jarvis");
                         const command = parts[parts.length - 1].trim();
+
                         if (command.length > 2) {
+                            // Wake word + command (e.g., "Jarvis turn on lights")
                             processInput(true, command);
                         } else {
-                            // Wake word only
+                            // Wake word only (e.g., "Jarvis")
+                            // 1. Stop mic to prevent capturing "Jarvis" again or self-noise
                             stopRecognition();
                             setTranscript("");
+
+                            // 2. Acknowledge found
                             const utterance = new SpeechSynthesisUtterance("Yes?");
+
                             utterance.onend = () => {
                                 setIsManualMode(true);
-                                startRecognition();
+                                startRecognition(); // Restart explicitly for command
                             };
+
                             window.speechSynthesis.speak(utterance);
                         }
                     } else {
+                        // Clear buffer if it gets too long without wake word
                         if (transcript.length > 100) setTranscript("");
                     }
                 }
