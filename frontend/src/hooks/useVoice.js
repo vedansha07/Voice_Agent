@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 
-const BACKEND_URL = 'https://voice-agent-j3at.onrender.com/api/voice';
+const BACKEND_URL = 'http://localhost:3000/api/voice'; // Updated to local for consistency with TTS
 
 export const useVoice = () => {
     const [response, setResponse] = useState(null);
@@ -106,32 +106,61 @@ export const useVoice = () => {
         }
     };
 
-    const speak = useCallback((text) => {
+    const audioRef = useRef(null);
+
+    const speak = useCallback(async (text) => {
         if (!text) return;
+
         setIsAiSpeaking(true);
-        stopRecognition(); // Stop listening while talking to prevent ECHO
+        stopRecognition();
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v => v.name.includes('Google') && v.lang.includes('en-US')) || voices[0];
-        if (preferredVoice) utterance.voice = preferredVoice;
+        try {
+            // Fetch raw audio Blob from backend
+            const response = await axios.post('http://localhost:3000/api/speak', { text }, { responseType: 'blob' });
 
-        utterance.onend = () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+
+            // Create a temporary local URL for the Blob
+            const audioUrl = URL.createObjectURL(response.data);
+            const audio = new Audio(audioUrl);
+            audioRef.current = audio;
+
+            audio.onended = () => {
+                setIsAiSpeaking(false);
+                setIsManualMode(true);
+                startRecognition();
+
+                // Free up memory
+                URL.revokeObjectURL(audioUrl);
+
+                if (window.followUpTimer) clearTimeout(window.followUpTimer);
+                window.followUpTimer = setTimeout(() => setIsManualMode(false), 10000);
+            };
+
+            audio.onerror = (e) => {
+                console.error("Audio Playback Error Details (Deepgram Blob):", e);
+                setIsAiSpeaking(false);
+                startRecognition();
+                URL.revokeObjectURL(audioUrl);
+            };
+
+            try {
+                await audio.play();
+            } catch (playError) {
+                console.error("Failed to start audio playback:", playError);
+                setIsAiSpeaking(false);
+                startRecognition();
+            }
+
+        } catch (error) {
+            console.error("TTS Fetch Error:", error);
             setIsAiSpeaking(false);
-            // After speaking, we want to listen again, likely for a follow-up
-            setIsManualMode(true);
             startRecognition();
+        }
 
-            if (window.followUpTimer) clearTimeout(window.followUpTimer);
-            window.followUpTimer = setTimeout(() => setIsManualMode(false), 10000);
-        };
-
-        utterance.onerror = () => {
-            setIsAiSpeaking(false);
-            startRecognition();
-        };
-
-        window.speechSynthesis.speak(utterance);
     }, []);
 
     // Command Processing Logic
@@ -160,14 +189,7 @@ export const useVoice = () => {
                             setTranscript("");
 
                             // 2. Acknowledge found
-                            const utterance = new SpeechSynthesisUtterance("Yes?");
-
-                            utterance.onend = () => {
-                                setIsManualMode(true);
-                                startRecognition(); // Restart explicitly for command
-                            };
-
-                            window.speechSynthesis.speak(utterance);
+                            speak("Yes?");
                         }
                     } else {
                         // Clear buffer if it gets too long without wake word
@@ -219,6 +241,13 @@ export const useVoice = () => {
     };
 
     const toggleListening = () => {
+        // Unlock audio on first interaction! Many browsers block Audio.play() otherwise.
+        if (!audioRef.current) {
+            audioRef.current = new Audio();
+            // Optional: play a silent base64 or empty sound to formally register an interaction
+            audioRef.current.play().catch(e => console.log("Audio unlock silently failed:", e));
+        }
+
         if (listening) {
             stopRecognition();
         } else {
@@ -228,7 +257,10 @@ export const useVoice = () => {
     };
 
     const cancelSpeech = () => {
-        window.speechSynthesis.cancel();
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
         setIsAiSpeaking(false);
         setTranscript("");
         setIsManualMode(true);

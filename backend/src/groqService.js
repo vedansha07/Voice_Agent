@@ -73,8 +73,12 @@ const generateResponse = async (userText, history = []) => {
         return { role, content };
     });
 
+    // Inject current date/time to make the agent context-aware
+    const currentDateTime = new Date().toLocaleString();
+    const dynamicSystemInstruction = `${SYSTEM_INSTRUCTION}\n\nCURRENT SYSTEM DATE AND TIME: ${currentDateTime}. Use this information accurately if the user asks for the date, time, day, or year.`;
+
     const messages = [
-        { role: "system", content: SYSTEM_INSTRUCTION },
+        { role: "system", content: dynamicSystemInstruction },
         ...formattedHistory,
         { role: "user", content: userText }
     ];
@@ -128,8 +132,6 @@ ${JSON.stringify(actionResult)}
 Instruction: Generate a JSON response { "type": "reply", "content": "...", "action": "none", "payload": {} } to answer the user based on this tool output.
 `;
 
-    console.log("[GroqService] Re-prompting LLM with tool output...");
-
     // Construct new history for the follow-up
     // Note: We need to respect the format expected by generateResponse
     const followUpHistory = [
@@ -141,7 +143,6 @@ Instruction: Generate a JSON response { "type": "reply", "content": "...", "acti
 
     try {
         const finalResponse = await generateResponse("Generate final response", followUpHistory);
-        console.log("[GroqService] Final response received");
         return finalResponse;
     } catch (error) {
         console.error("[GroqService] Re-prompt failed:", error);
