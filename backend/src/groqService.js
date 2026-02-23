@@ -74,7 +74,7 @@ const generateResponse = async (userText, history = []) => {
     });
 
     // Inject current date/time to make the agent context-aware
-    const currentDateTime = new Date().toLocaleString();
+    const currentDateTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
     const dynamicSystemInstruction = `${SYSTEM_INSTRUCTION}\n\nCURRENT SYSTEM DATE AND TIME: ${currentDateTime}. Use this information accurately if the user asks for the date, time, day, or year.`;
 
     const messages = [

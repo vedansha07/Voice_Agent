@@ -14,7 +14,7 @@ const executeCommand = async (action, payload) => {
     case 'getTime':
       const now = new Date();
       return {
-        result: `The current time is ${now.toLocaleTimeString()}.`
+        result: `The current time is ${now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.`
       };
 
     case 'searchWeb':
