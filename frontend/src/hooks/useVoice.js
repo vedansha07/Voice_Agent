@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 
-const BACKEND_URL = 'http://localhost:3000/api/voice'; // Updated to local for consistency with TTS
+const BACKEND_URL = 'https://voice-agent-e9g3.vercel.app/api/voice'; // Updated to local for consistency with TTS
 
 export const useVoice = () => {
     const [response, setResponse] = useState(null);
@@ -116,7 +116,7 @@ export const useVoice = () => {
 
         try {
             // Fetch raw audio Blob from backend
-            const response = await axios.post('http://localhost:3000/api/speak', { text }, { responseType: 'blob' });
+            const response = await axios.post('https://voice-agent-e9g3.vercel.app/api/speak', { text }, { responseType: 'blob' });
 
             if (audioRef.current) {
                 audioRef.current.pause();
