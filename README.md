@@ -4,27 +4,27 @@ A fully Agentic Voice Assistant that allows "Hands-Free" interaction using the *
 
 Designed for production with ultra-low latency **Deepgram Aura TTS** and **Groq (Llama 3)** engines.
 
-## 🚀 Features
+## Features
 
-- 🎙️ **Hands-Free Activation**: Just say **"Jarvis"** to wake it up. No clicking required. *(Powered by Native Browser Speech API)*.
-- 🔊 **Deepgram Aura TTS**: Hyper-realistic, zero-latency streaming audio text-to-speech using Deepgram's Asteria voice model.
-- 🕒 **Real-Time Date Awareness**: The AI is injected with the exact live date and time on every interaction natively.
-- 🔄 **Continuous Listening**: The assistant stays awake and auto-restarts if it detects silence, ensuring it's always ready.
-- 🚫 **Echo Cancellation**: Automatically stops its own microphone while speaking to prevent hearing itself.
-- 🎨 **Modern Dark UI**: Immersive dark theme with a pulsing concentric circle visualizer.
-- 🧠 **AI Intelligence**: Powered by **Groq (Llama 3)** for ultra-fast responses.
-- 🌐 **Browser Control**: Can open websites (YouTube, Google) directly.
+-  **Hands-Free Activation**: Just say **"Jarvis"** to wake it up. No clicking required. *(Powered by Native Browser Speech API)*.
+-  **Deepgram Aura TTS**: Hyper-realistic, zero-latency streaming audio text-to-speech using Deepgram's Asteria voice model.
+-  **Real-Time Date Awareness**: The AI is injected with the exact live date and time on every interaction natively.
+-  **Continuous Listening**: The assistant stays awake and auto-restarts if it detects silence, ensuring it's always ready.
+-  **Echo Cancellation**: Automatically stops its own microphone while speaking to prevent hearing itself.
+-  **Modern Dark UI**: Immersive dark theme with a pulsing concentric circle visualizer.
+-  **AI Intelligence**: Powered by **Groq (Llama 3)** for ultra-fast responses.
+-  **Browser Control**: Can open websites (YouTube, Google) directly.
 
 ---
 
-## 🛠️ Architecture
+##  Architecture
 
 - **Frontend (Vercel/Vite)**: React, Vite, TailwindCSS. Uses `window.SpeechRecognition` for input and heavily optimized `Audio` buffers to instantly stream MP3 TTS blobs.
 - **Backend (Render/Node)**: Node.js, Express. Connects to the Groq API for LLM orchestration and pipelines raw binary audio streams from Deepgram directly to the frontend.
 
 ---
 
-## 📦 Setup & Installation
+##  Setup & Installation
 
 ### Prerequisites
 - Node.js (v18+)
@@ -52,7 +52,7 @@ npm run dev
 
 ---
 
-## 🌍 Deployment
+##  Deployment
 
 ### 1. Deploy Backend
 - Deploy the `/backend` folder.
@@ -66,7 +66,7 @@ npm run dev
 
 ---
 
-## 🎮 Usage Guide
+##  Usage Guide
 
 1. **Initial Setup**: Open the app. **Allow Microphone Permission** when prompted.
 2. **Wake Word**: Just say **"Jarvis"**. Click the microphone button once to unlock the browser Audio context.
@@ -80,7 +80,7 @@ npm run dev
 
 ---
 
-## ⚠️ Troubleshooting
+##  Troubleshooting
 
 - **Audio doesn't play the first time?**
   - Modern browsers block Auto-Play. Click the microphone button *before* speaking to formally unlock the Audio Context!
