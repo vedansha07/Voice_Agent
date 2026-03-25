@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import { useAuth0 } from '@auth0/auth0-react';
 
-const BACKEND_URL = 'https://voice-agent-e9g3.vercel.app/api/voice'; // Updated to local for consistency with TTS
+const BACKEND_URL = 'http://localhost:3000/api/voice'; // Updated to local server
 
 export const useVoice = () => {
+    const { getAccessTokenSilently, isAuthenticated } = useAuth0();
     const [response, setResponse] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [history, setHistory] = useState([]);
@@ -116,7 +118,16 @@ export const useVoice = () => {
 
         try {
             // Fetch raw audio Blob from backend
-            const response = await axios.post('https://voice-agent-e9g3.vercel.app/api/speak', { text }, { responseType: 'blob' });
+            let token = null;
+            if (isAuthenticated) {
+                token = await getAccessTokenSilently();
+            }
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+            const response = await axios.post('http://localhost:3000/api/speak', { text }, { 
+                responseType: 'blob',
+                headers
+            });
 
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -214,10 +225,16 @@ export const useVoice = () => {
             setHistory(prev => [...prev, { type: 'user', text: textToProcess }]);
 
             console.log("Sending to backend:", textToProcess);
+            let token = null;
+            if (isAuthenticated) {
+                token = await getAccessTokenSilently();
+            }
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
             const res = await axios.post(BACKEND_URL, {
                 text: textToProcess,
                 sessionId
-            });
+            }, { headers });
 
             const data = res.data;
             setHistory(prev => [...prev, { type: 'assistant', text: data.content }]);

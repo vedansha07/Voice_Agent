@@ -9,10 +9,16 @@ const cors = require('cors');
 const { initGroq, generateResponse, handleToolOutput } = require('./groqService');
 const { executeCommand } = require('./commandDispatcher');
 const keepAlive = require('./keepAlive');
+const connectDB = require('./config/db');
+const { checkJwt } = require('./middleware/auth');
+const User = require('./models/User');
+const Conversation = require('./models/Conversation');
 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+connectDB();
 
 keepAlive(app);
 
@@ -24,7 +30,7 @@ app.use(cors({
         "http://localhost:4174"
     ],
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: false
 }));
 
@@ -36,21 +42,61 @@ app.use(express.json());
 
 initGroq(process.env.GROQ_API_KEY);
 
-const sessions = new Map();
-
 app.get('/', (req, res) => {
     res.send('Voice Agent Backend is running');
 });
 
-app.post('/api/voice', async (req, res) => {
+app.post('/api/user/sync', checkJwt, async (req, res) => {
+    if (!req.auth) return res.json({ message: "Guest Mode - No Sync Required" });
+    try {
+        const auth0Id = req.auth.payload.sub;
+        const { email, name, picture } = req.body;
+        
+        let user = await User.findOne({ auth0Id });
+        if (!user) {
+            user = new User({ auth0Id, email, name, picture });
+            await user.save();
+        } else {
+            user.email = email || user.email;
+            user.name = name || user.name;
+            user.picture = picture || user.picture;
+            await user.save();
+        }
+        res.json(user);
+    } catch (error) {
+        console.error('Error syncing user:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/api/voice', checkJwt, async (req, res) => {
     const { text, sessionId } = req.body;
+    const auth0Id = req.auth ? req.auth.payload.sub : `guest_${sessionId}`;
 
     if (!text || !sessionId) {
         return res.status(400).json({ error: 'Missing text or sessionId' });
     }
 
     try {
-        const history = sessions.get(sessionId) || [];
+        let user = await User.findOne({ auth0Id });
+        if (!user) {
+            // Automatically create a document for Guests (or if the sync somehow failed for authenticated users)
+            const isGuest = auth0Id.startsWith('guest_');
+            user = new User({ 
+                auth0Id, 
+                email: isGuest ? `${auth0Id}@guest.local` : `${auth0Id}@auth0.local`, 
+                name: isGuest ? 'Guest User' : 'New User',
+                picture: ''
+            });
+            await user.save();
+        }
+
+        let conversation = await Conversation.findOne({ sessionId, userId: user._id });
+        if (!conversation) {
+            conversation = new Conversation({ sessionId, userId: user._id, messages: [] });
+        }
+
+        const history = conversation.messages.map(m => ({ role: m.role, content: m.content }));
 
         let geminiResponse = await generateResponse(text, history);
 
@@ -66,7 +112,8 @@ app.post('/api/voice', async (req, res) => {
         const userTurn = { role: 'user', content: text };
         const modelTurn = { role: 'assistant', content: JSON.stringify(geminiResponse) };
 
-        sessions.set(sessionId, [...history, userTurn, modelTurn]);
+        conversation.messages.push(userTurn, modelTurn);
+        await conversation.save();
 
         res.json({ ...geminiResponse });
 
@@ -78,7 +125,7 @@ app.post('/api/voice', async (req, res) => {
 
 const { createClient } = require('@deepgram/sdk');
 
-app.post('/api/speak', async (req, res) => {
+app.post('/api/speak', checkJwt, async (req, res) => {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "No text provided" });
 

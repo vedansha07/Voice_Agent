@@ -13,13 +13,62 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #0d0d11;
-  /* Extremely dark background */
-  color: #e1e1e6;
+  background-color: #020617; /* Slate 950 */
+  color: #f8fafc; /* Slate 50 */
 }
 
 #root {
   width: 100%;
   margin: 0 auto;
   text-align: center;
+}
+
+@keyframes gradientSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulseSlow {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.glass-panel {
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+}
+
+.animated-gradient-text {
+  background: linear-gradient(90deg, #60a5fa, #c084fc, #f472b6);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: pulseSlow 3s ease-in-out infinite alternate;
+}
+
+.bg-aurora {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg at 50% 50%, rgba(56, 189, 248, 0.15) 0deg, rgba(129, 140, 248, 0.15) 120deg, rgba(167, 139, 250, 0.15) 240deg, rgba(56, 189, 248, 0.15) 360deg);
+  animation: gradientSpin 15s linear infinite;
+  z-index: 0;
 }
