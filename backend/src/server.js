@@ -18,7 +18,12 @@ const Conversation = require('./models/Conversation');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-connectDB();
+connectDB().then(() => {
+    // Drop the overly strict index if it exists to fix Guest Mode session swaps
+    Conversation.collection.dropIndex('sessionId_1').catch(err => {
+        // Ignored if index does not exist
+    });
+});
 
 keepAlive(app);
 
@@ -72,6 +77,7 @@ app.post('/api/user/sync', checkJwt, async (req, res) => {
 app.post('/api/voice', checkJwt, async (req, res) => {
     const { text, sessionId } = req.body;
     const auth0Id = req.auth ? req.auth.payload.sub : `guest_${sessionId}`;
+    const isGuest = auth0Id.startsWith('guest_');
 
     if (!text || !sessionId) {
         return res.status(400).json({ error: 'Missing text or sessionId' });
@@ -81,7 +87,6 @@ app.post('/api/voice', checkJwt, async (req, res) => {
         let user = await User.findOne({ auth0Id });
         if (!user) {
             // Automatically create a document for Guests (or if the sync somehow failed for authenticated users)
-            const isGuest = auth0Id.startsWith('guest_');
             user = new User({ 
                 auth0Id, 
                 email: isGuest ? `${auth0Id}@guest.local` : `${auth0Id}@auth0.local`, 
@@ -98,13 +103,13 @@ app.post('/api/voice', checkJwt, async (req, res) => {
 
         const history = conversation.messages.map(m => ({ role: m.role, content: m.content }));
 
-        let geminiResponse = await generateResponse(text, history);
+        let geminiResponse = await generateResponse(text, history, isGuest);
 
         if (geminiResponse.action !== 'none') {
             if (geminiResponse.action !== 'openWebpage' && geminiResponse.action !== 'clearChat') {
                 const actionResult = await executeCommand(geminiResponse.action, geminiResponse.payload);
                 if (actionResult) {
-                    geminiResponse = await handleToolOutput(text, history, geminiResponse.action, actionResult);
+                    geminiResponse = await handleToolOutput(text, history, geminiResponse.action, actionResult, isGuest);
                 }
             }
         }

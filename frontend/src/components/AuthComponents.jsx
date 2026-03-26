@@ -8,7 +8,10 @@ export const LoginButton = () => {
 
   return (
     <button 
-      onClick={() => loginWithRedirect()}
+      onClick={() => {
+        localStorage.removeItem('sessionId');
+        loginWithRedirect();
+      }}
       className="w-full px-6 py-4 rounded-2xl bg-slate-800 text-blue-400 hover:bg-blue-600 hover:text-white font-semibold transition-all duration-300 shadow-lg text-sm tracking-wide border border-transparent hover:border-blue-500/50"
     >
       Sign In Securely
@@ -22,7 +25,10 @@ export const LogoutButton = ({ onGuestExit }) => {
   if (!isAuthenticated && onGuestExit) {
     return (
       <button
-        onClick={onGuestExit}
+        onClick={() => {
+          localStorage.removeItem('sessionId');
+          onGuestExit();
+        }}
         className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full text-sm font-medium transition-colors border border-slate-700"
       >
         Exit Guest Mode
@@ -39,7 +45,10 @@ export const LogoutButton = ({ onGuestExit }) => {
         <span className="text-sm font-medium text-slate-300 hidden sm:block">{user.name}</span>
       </div>
       <button
-        onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+        onClick={() => {
+          localStorage.removeItem('sessionId');
+          logout({ logoutParams: { returnTo: window.location.origin } });
+        }}
         className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full text-sm font-medium transition-colors border border-slate-700"
       >
         Logout

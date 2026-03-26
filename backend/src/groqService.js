@@ -28,10 +28,10 @@ RULES:
 - NEVER say "I cannot open webpages". You CAN. Just send the JSON action.
 - If the user asks to "Open [Site]", ALWAYS return action: 'openWebpage'.
 - If the user asks to "Search [Query]", ALWAYS return action: 'openWebpage' with a Google Search URL.
-- You DO have long-term memory across sessions, because your conversations are securely saved to a MongoDB database. NEVER claim that you will forget information when the session ends or browser closes. You can remember details permanently.
 - Reply concisely.
 
 Actions available: 
+- 'none' (payload: {}) -> Use this for ALL normal conversational replies, greetings, and goodbyes.
 - 'getTime' (payload: {})
 - 'openWebpage' (payload: { url: string })
 - 'clearChat' (payload: {})
@@ -42,8 +42,7 @@ Instructions:
    Content: "Opening weather for Pune."
 2. For general search requests, use 'openWebpage' with url: "https://www.google.com/search?q=<query>"
 3. For opening specific sites (YouTube, Google), use 'openWebpage' with the correct URL.
-4. For "clear chat", "reset", or "delete history", use 'clearChat'.
-5. For time, use 'getTime'.
+4. CRITICAL: Use action: 'none' for saying goodbye (e.g., "bye", "goodbye"). ONLY use 'clearChat' if the user EXPLICITLY asks to "clear chat", "delete history", or "reset conversation".
 
 Structure:
 {
@@ -54,7 +53,7 @@ Structure:
 }
 `;
 
-const generateResponse = async (userText, history = []) => {
+const generateResponse = async (userText, history = [], isGuest = false) => {
     if (!groq) {
         throw new Error("Groq client not initialized");
     }
@@ -76,7 +75,13 @@ const generateResponse = async (userText, history = []) => {
 
     // Inject current date/time to make the agent context-aware
     const currentDateTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
-    const dynamicSystemInstruction = `${SYSTEM_INSTRUCTION}\n\nCURRENT SYSTEM DATE AND TIME: ${currentDateTime}. Use this information accurately if the user asks for the date, time, day, or year.`;
+    
+    // Inject Memory Context based on Guest status
+    const memoryInstruction = isGuest 
+        ? "You are currently interacting with a Guest user. Their conversation history is only saved temporarily for this active session. If they ask about memory, inform them that their history will be lost on refresh and they must log in to securely save their conversations permanently to the database."
+        : "You DO have long-term memory across sessions, because your conversations are securely saved to a MongoDB database. NEVER claim that you will forget information when the session ends or browser closes. You can remember details permanently.";
+
+    const dynamicSystemInstruction = `${SYSTEM_INSTRUCTION}\n\nMEMORY STATUS: ${memoryInstruction}\n\nCURRENT SYSTEM DATE AND TIME: ${currentDateTime}. Use this information accurately if the user asks for the date, time, day, or year.`;
 
     const messages = [
         { role: "system", content: dynamicSystemInstruction },
@@ -125,7 +130,7 @@ const generateResponse = async (userText, history = []) => {
     }
 };
 
-const handleToolOutput = async (originalText, history, action, actionResult) => {
+const handleToolOutput = async (originalText, history, action, actionResult, isGuest = false) => {
     const toolOutputMessage = `
 System Tool Output for action '${action}':
 ${JSON.stringify(actionResult)}
@@ -143,7 +148,7 @@ Instruction: Generate a JSON response { "type": "reply", "content": "...", "acti
     ];
 
     try {
-        const finalResponse = await generateResponse("Generate final response", followUpHistory);
+        const finalResponse = await generateResponse("Generate final response", followUpHistory, isGuest);
         return finalResponse;
     } catch (error) {
         console.error("[GroqService] Re-prompt failed:", error);

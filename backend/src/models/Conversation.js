@@ -24,8 +24,7 @@ const conversationSchema = new mongoose.Schema({
     },
     sessionId: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
     messages: [messageSchema]
 }, { timestamps: true });

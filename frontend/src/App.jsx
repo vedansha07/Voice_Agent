@@ -8,6 +8,42 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { LoginButton, LogoutButton } from './components/AuthComponents';
 import axios from 'axios';
 
+const HINTS = [
+  'Try saying "Search Messi on Youtube"',
+  'Try saying "What is the weather in Tokyo?"',
+  'Try saying "Open Github"',
+  'Try saying "What is the exact time right now?"',
+  'Try saying "Clear my chat history"'
+];
+
+function FeatureHints() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % HINTS.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex justify-center pointer-events-none z-10 overflow-hidden h-12 mt-6">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.5 }}
+          className="text-slate-300 text-sm tracking-wide bg-slate-800/80 px-6 py-2 rounded-full border border-slate-700/50 backdrop-blur-md shadow-lg flex items-center gap-2"
+        >
+          <span className="text-blue-400">✨</span> {HINTS[index]}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function App() {
   const {
     transcript,
@@ -110,8 +146,15 @@ function App() {
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 pointer-events-none" />
 
+      {/* Guest Mode Warning Banner */}
+      {isGuest && (
+        <div className="absolute top-0 left-0 right-0 bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-200/80 text-xs py-2 text-center flex items-center justify-center gap-2 backdrop-blur-md z-[60]">
+           <span>⚠️ Guest Mode: Conversations are only saved for this session. Log in to save permanently.</span>
+        </div>
+      )}
+
       {/* Top Bar / Logout */}
-      <div className="absolute top-6 right-6 z-50">
+      <div className="absolute top-10 right-6 z-50">
         <LogoutButton onGuestExit={() => setIsGuest(false)} />
       </div>
 
@@ -135,6 +178,10 @@ function App() {
             <span className="text-slate-500 text-sm tracking-widest uppercase">Tap Mic to Start</span>
           )}
         </motion.div>
+
+        {/* Floating Feature Hints */}
+        <FeatureHints />
+
       </div>
 
       {/* Control Bar */}
