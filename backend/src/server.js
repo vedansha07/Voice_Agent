@@ -8,7 +8,6 @@ const express = require('express');
 const cors = require('cors');
 const { initGroq, generateResponse, handleToolOutput } = require('./groqService');
 const { executeCommand } = require('./commandDispatcher');
-const keepAlive = require('./keepAlive');
 const connectDB = require('./config/db');
 const { checkJwt } = require('./middleware/auth');
 const User = require('./models/User');
@@ -24,8 +23,6 @@ connectDB().then(() => {
         // Ignored if index does not exist
     });
 });
-
-keepAlive(app);
 
 app.use(cors({
     origin: [
