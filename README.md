@@ -9,8 +9,9 @@ Designed for production with ultra-low latency Deepgram Aura TTS, Groq (Llama 3)
 - **Hands-Free Activation**: Just say **"Jarvis"** to wake it up. No clicking required. *(Powered by Native Browser Speech API)*.
 - **Deepgram Aura TTS**: Hyper-realistic, zero-latency streaming audio text-to-speech using Deepgram's Asteria voice model.
 - **Secure Authentication**: Integrated with Auth0 for enterprise-grade login flows, including persistent user sessions and secure JWT verification on the backend.
-- **Long-Term Memory**: All conversations are faithfully persisted to a MongoDB database, allowing the AI to remember context across browser restarts.
-- **Guest Mode Access**: Users can bypass standard login and interact as a guest, utilizing gracefully degrading session-based database storage.
+- **Long-Term Memory**: All authenticated conversations are faithfully persisted to a MongoDB database, allowing the AI to remember context permanently across browser restarts.
+- **Dynamic Guest Mode**: Users can bypass login to interact as a guest. The AI is dynamically injected with 'Guest Context' awareness, understanding their history is only temporary for the active session.
+- **Feature Discovery Hints**: A sleek, animated suggestions banner continuously floats above the controls to intuitively guide users on the Agent's advanced capabilities.
 - **Real-Time Date Awareness**: The AI is injected with the exact live date and time on every interaction natively.
 - **Continuous Listening**: The assistant stays awake and auto-restarts if it detects silence, ensuring it is always ready.
 - **Echo Cancellation**: Automatically stops its own microphone while speaking to prevent hearing itself.
