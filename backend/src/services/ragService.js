@@ -1,7 +1,11 @@
 const pdfParse = require('pdf-parse');
 const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
-const { pipeline } = require('@xenova/transformers');
+const { pipeline, env } = require('@xenova/transformers');
 const RagChunk = require('../models/RagChunk');
+
+// Vercel Serverless Functions have a Read-Only filesystem. 
+// We MUST explicitly redirect the Transformer download cache to the writable /tmp directory.
+env.cacheDir = '/tmp/.cache';
 
 const embeddingCache = new Map();
 let extractor = null;
