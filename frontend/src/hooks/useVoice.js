@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
-const BACKEND_URL = 'http://localhost:3000/api/voice'; // Updated to local server
+const BACKEND_URL = import.meta.env.MODE === 'production' 
+    ? 'https://voice-agent-e9g3.vercel.app/api/voice' 
+    : 'http://localhost:3000/api/voice';
 
 export const useVoice = () => {
     const { getAccessTokenSilently, isAuthenticated } = useAuth0();
@@ -124,7 +126,11 @@ export const useVoice = () => {
             }
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-            const response = await axios.post('http://localhost:3000/api/speak', { text }, { 
+            const TTS_URL = import.meta.env.MODE === 'production' 
+                ? 'https://voice-agent-e9g3.vercel.app/api/speak' 
+                : 'http://localhost:3000/api/speak';
+
+            const response = await axios.post(TTS_URL, { text }, { 
                 responseType: 'blob',
                 headers
             });

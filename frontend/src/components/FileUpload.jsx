@@ -47,7 +47,11 @@ const FileUpload = ({ sessionId }) => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      await axios.post('http://localhost:3000/api/uploadDocument', formData, {
+      const UPLOAD_URL = import.meta.env.MODE === 'production' 
+        ? 'https://voice-agent-e9g3.vercel.app/api/uploadDocument' 
+        : 'http://localhost:3000/api/uploadDocument';
+
+      await axios.post(UPLOAD_URL, formData, {
         headers: {
           ...headers,
           'Content-Type': 'multipart/form-data'
