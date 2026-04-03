@@ -1,11 +1,5 @@
 const pdfParse = require('pdf-parse');
-const { pipeline, env } = require('@xenova/transformers');
 const RagChunk = require('../models/RagChunk');
-
-// Vercel Serverless Functions have a Read-Only filesystem. 
-// We MUST explicitly redirect the Transformer download cache to the writable /tmp directory.
-env.cacheDir = '/tmp/.cache';
-
 const embeddingCache = new Map();
 let extractor = null;
 
@@ -16,8 +10,14 @@ const getEmbedding = async (text) => {
     
     try {
         if (!extractor) {
+            // Dynamically import Xenova ESM module to bypass Vercel crash
+            const xenova = await import('@xenova/transformers');
+            
+            // Set Vercel read-only bypass
+            xenova.env.cacheDir = '/tmp/.cache';
+            
             // Load the pipeline locally. The first run will download the model weights (~90MB).
-            extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+            extractor = await xenova.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
         }
 
         const output = await extractor(text, { pooling: 'mean', normalize: true });
