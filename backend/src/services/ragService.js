@@ -1,5 +1,4 @@
 const pdfParse = require('pdf-parse');
-const { RecursiveCharacterTextSplitter } = require('@langchain/textsplitters');
 const { pipeline, env } = require('@xenova/transformers');
 const RagChunk = require('../models/RagChunk');
 
@@ -42,6 +41,9 @@ const processAndStoreDocument = async (fileBuffer, userId, sessionId) => {
 
         const data = await pdfParse(fileBuffer);
         const text = data.text;
+
+        // Dynamically import the ES Module to bypass Vercel's ERR_REQUIRE_ESM crash
+        const { RecursiveCharacterTextSplitter } = await import('@langchain/textsplitters');
 
         const splitter = new RecursiveCharacterTextSplitter({
             chunkSize: 800,
