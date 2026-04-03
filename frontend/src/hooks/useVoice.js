@@ -291,8 +291,10 @@ export const useVoice = () => {
         response,
         history,
         lastError,
+        sessionId,
         startListening: toggleListening,
         stopListening: toggleListening,
+
         cancelSpeech,
         browserSupportsSpeechRecognition,
         isAiSpeaking,

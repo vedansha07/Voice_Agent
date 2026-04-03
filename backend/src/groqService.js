@@ -3,6 +3,8 @@
  * Handles interaction with Groq API.
  */
 const Groq = require('groq-sdk');
+const { retrieveRelevantDocs } = require('./services/ragService');
+const { retrieveMemory } = require('./services/memoryService');
 
 let groq;
 
@@ -42,7 +44,9 @@ Instructions:
    Content: "Opening weather for Pune."
 2. For general search requests, use 'openWebpage' with url: "https://www.google.com/search?q=<query>"
 3. For opening specific sites (YouTube, Google), use 'openWebpage' with the correct URL.
-4. CRITICAL: Use action: 'none' for saying goodbye (e.g., "bye", "goodbye"). ONLY use 'clearChat' if the user EXPLICITLY asks to "clear chat", "delete history", or "reset conversation".
+4. RAG Fallback: If the user explicitly asks about the uploaded document, and it cannot be answered by the DOCUMENT CONTEXT, reply exactly: "I couldn't find this in your uploaded documents. I can look it up online if you want." (DO NOT use this fallback for normal conversational questions, or information that is already present in your chat history/memory).
+5. If you suggested looking it up online in the previous turn, and the user confirms (e.g. "yes", "sure", "ok"), you MUST trigger the 'openWebpage' action with a Google search for their preceding question.
+6. Prioritize Knowledge: DOCUMENT CONTEXT > MEMORY CONTEXT > Base Knowledge. Use contextual information if relevant.
 
 Structure:
 {
@@ -53,7 +57,7 @@ Structure:
 }
 `;
 
-const generateResponse = async (userText, history = [], isGuest = false) => {
+const generateResponse = async (userText, history = [], isGuest = false, userId = null) => {
     if (!groq) {
         throw new Error("Groq client not initialized");
     }
@@ -81,7 +85,31 @@ const generateResponse = async (userText, history = [], isGuest = false) => {
         ? "You are currently interacting with a Guest user. Their conversation history is only saved temporarily for this active session. If they ask about memory, inform them that their history will be lost on refresh and they must log in to securely save their conversations permanently to the database."
         : "You DO have long-term memory across sessions, because your conversations are securely saved to a MongoDB database. NEVER claim that you will forget information when the session ends or browser closes. You can remember details permanently.";
 
-    const dynamicSystemInstruction = `${SYSTEM_INSTRUCTION}\n\nMEMORY STATUS: ${memoryInstruction}\n\nCURRENT SYSTEM DATE AND TIME: ${currentDateTime}. Use this information accurately if the user asks for the date, time, day, or year.`;
+    let docContextInfo = "";
+    let memContextInfo = "";
+
+    if (userId) {
+        try {
+            const [docResult, memResult] = await Promise.all([
+                retrieveRelevantDocs(userText, userId),
+                retrieveMemory(userText, userId)
+            ]);
+
+            if (docResult && docResult.found) {
+                docContextInfo = `\nDOCUMENT CONTEXT (Priority: HIGH):\n` 
+                    + docResult.results.map((r, i) => `[Doc ${i+1}] (score: ${r.score.toFixed(2)}): ${r.text}`).join('\n');
+            }
+
+            if (memResult && memResult.found) {
+                memContextInfo = `\nMEMORY CONTEXT (Priority: MEDIUM):\n` 
+                    + memResult.results.map((r, i) => `[Mem ${i+1} ${r.role}] (score: ${r.score.toFixed(2)}): ${r.text}`).join('\n');
+            }
+        } catch (err) {
+            console.error("Context retrieval error:", err);
+        }
+    }
+
+    const dynamicSystemInstruction = `${SYSTEM_INSTRUCTION}\n\nMEMORY STATUS: ${memoryInstruction}\n\nCURRENT SYSTEM DATE AND TIME: ${currentDateTime}.${docContextInfo}${memContextInfo}`;
 
     const messages = [
         { role: "system", content: dynamicSystemInstruction },
@@ -148,7 +176,7 @@ Instruction: Generate a JSON response { "type": "reply", "content": "...", "acti
     ];
 
     try {
-        const finalResponse = await generateResponse("Generate final response", followUpHistory, isGuest);
+        const finalResponse = await generateResponse("Generate final response based on tool output", followUpHistory, isGuest, null);
         return finalResponse;
     } catch (error) {
         console.error("[GroqService] Re-prompt failed:", error);

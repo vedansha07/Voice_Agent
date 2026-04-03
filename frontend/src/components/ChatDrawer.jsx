@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-const ChatDrawer = ({ isOpen, onClose, history }) => {
+const ChatDrawer = ({ isOpen, onClose, history, sessionId }) => {
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {

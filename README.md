@@ -10,6 +10,7 @@ Designed for production with ultra-low latency Deepgram Aura TTS, Groq (Llama 3)
 - **Deepgram Aura TTS**: Hyper-realistic, zero-latency streaming audio text-to-speech using Deepgram's Asteria voice model.
 - **Secure Authentication**: Integrated with Auth0 for enterprise-grade login flows, including persistent user sessions and secure JWT verification on the backend.
 - **Long-Term Memory**: All authenticated conversations are faithfully persisted to a MongoDB database, allowing the AI to remember context permanently across browser restarts.
+- **Document Intelligence (RAG)**: Upload PDF documents instantly. The backend extracts text and uses highly-secure, fully-local offline inference (`@xenova/transformers`) to generate dense semantic vector embeddings. Using MongoDB Atlas Vector Search with a strict single-document context wipe, the LLM will answer deep questions strictly grounded to your uploaded documents without hallucinating.
 - **Dynamic Guest Mode**: Users can bypass login to interact as a guest. The AI is dynamically injected with 'Guest Context' awareness, understanding their history is only temporary for the active session.
 - **Feature Discovery Hints**: A sleek, animated suggestions banner continuously floats above the controls to intuitively guide users on the Agent's advanced capabilities.
 - **Real-Time Date Awareness**: The AI is injected with the exact live date and time on every interaction natively.
@@ -24,8 +25,8 @@ Designed for production with ultra-low latency Deepgram Aura TTS, Groq (Llama 3)
 ## Architecture
 
 - **Frontend (Vercel/Vite)**: React, Vite, TailwindCSS. Uses Auth0 React Provider for authentication. Utilizes `window.SpeechRecognition` for input and heavily optimized `Audio` buffers to instantly stream MP3 TTS blobs.
-- **Backend (Node/Express)**: Node.js, Express. Protected by `express-oauth2-jwt-bearer` middleware. Connects to the Groq API for LLM orchestration and pipelines raw binary audio streams from Deepgram directly to the frontend.
-- **Database**: MongoDB via Mongoose for persisting user profiles and conversation history.
+- **Backend (Node/Express)**: Node.js, Express. Protected by `express-oauth2-jwt-bearer` middleware. Runs local offline semantic inference for RAG pipelines without exposing data. Connects to the Groq API for LLM orchestration and pipelines raw binary audio streams from Deepgram directly to the frontend.
+- **Database**: MongoDB via Mongoose for persisting user profiles and semantic conversation memory. Implements hyper-optimized Atlas Vector Search indexes mapping massive float32 vectors (`all-MiniLM-L6-v2`) for instant long-term context injection and RAG traversal.
 
 ---
 
@@ -107,7 +108,11 @@ npm run dev
    - "Jarvis, open YouTube"
    - "Jarvis, what is the exact date today?"
    - "Jarvis, reset chat"
-4. Interruption:
+4. Intelligent Documents (RAG):
+   - Click the Upload button on the top-left to submit a PDF.
+   - You can then ask questions strictly related to the content inside that PDF!
+   - (Note: uploading a new document completely wipes the memory of the previously uploaded document to maintain perfect precision context).
+5. Interruption:
    - Say "Stop" or click the Red Stop Button to interrupt the AI.
 
 ---

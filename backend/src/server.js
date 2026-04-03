@@ -12,10 +12,14 @@ const connectDB = require('./config/db');
 const { checkJwt } = require('./middleware/auth');
 const User = require('./models/User');
 const Conversation = require('./models/Conversation');
+const multer = require('multer');
+const { processAndStoreDocument } = require('./services/ragService');
+const { vectorizeMessage } = require('./services/memoryService');
 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const upload = multer({ storage: multer.memoryStorage() });
 
 connectDB().then(() => {
     // Drop the overly strict index if it exists to fix Guest Mode session swaps
@@ -46,6 +50,34 @@ initGroq(process.env.GROQ_API_KEY);
 
 app.get('/', (req, res) => {
     res.send('Voice Agent Backend is running');
+});
+
+app.post('/api/uploadDocument', checkJwt, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        const sessionId = req.body.sessionId || 'default';
+        const auth0Id = req.auth ? req.auth.payload.sub : `guest_${sessionId}`;
+        const isGuest = auth0Id.startsWith('guest_');
+        
+        let user = await User.findOne({ auth0Id });
+        if (!user) {
+            user = new User({ 
+                auth0Id, 
+                email: isGuest ? `${auth0Id}@guest.local` : `${auth0Id}@auth0.local`, 
+                name: isGuest ? 'Guest User' : 'New User',
+                picture: ''
+            });
+            await user.save();
+        }
+
+        const result = await processAndStoreDocument(req.file.buffer, user._id.toString(), sessionId);
+        res.json(result);
+    } catch (error) {
+        console.error('Error uploading document:', error);
+        res.status(500).json({ error: error.message || 'Internal server error while processing document' });
+    }
 });
 
 app.post('/api/user/sync', checkJwt, async (req, res) => {
@@ -100,7 +132,7 @@ app.post('/api/voice', checkJwt, async (req, res) => {
 
         const history = conversation.messages.map(m => ({ role: m.role, content: m.content }));
 
-        let geminiResponse = await generateResponse(text, history, isGuest);
+        let geminiResponse = await generateResponse(text, history, isGuest, user._id.toString());
 
         if (geminiResponse.action !== 'none') {
             if (geminiResponse.action !== 'openWebpage' && geminiResponse.action !== 'clearChat') {
@@ -116,6 +148,12 @@ app.post('/api/voice', checkJwt, async (req, res) => {
 
         conversation.messages.push(userTurn, modelTurn);
         await conversation.save();
+
+        // Vectorize meaningful messages in background
+        if (!isGuest) {
+            vectorizeMessage(text, 'user', user._id.toString(), sessionId).catch(console.error);
+            vectorizeMessage(geminiResponse.content, 'assistant', user._id.toString(), sessionId).catch(console.error);
+        }
 
         res.json({ ...geminiResponse });
 

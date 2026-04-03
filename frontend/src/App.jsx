@@ -7,13 +7,14 @@ import ChatDrawer from './components/ChatDrawer';
 import { useAuth0 } from '@auth0/auth0-react';
 import { LoginButton, LogoutButton } from './components/AuthComponents';
 import axios from 'axios';
+import FileUpload from './components/FileUpload';
 
 const HINTS = [
-  'Try saying "Search Messi on Youtube"',
-  'Try saying "What is the weather in Tokyo?"',
-  'Try saying "Open Github"',
-  'Try saying "What is the exact time right now?"',
-  'Try saying "Clear my chat history"'
+  'Try uploading a PDF and asking for a summary 📄',
+  'Try saying "What is the exact time right now?" 🕒',
+  'Ask questions about your uploaded documents 🤔',
+  'Try saying "Search Messi on Youtube" 🔍',
+  'Try saying "Clear my chat history" 🧹'
 ];
 
 function FeatureHints() {
@@ -56,7 +57,8 @@ function App() {
     cancelSpeech,
     browserSupportsSpeechRecognition,
     isAiSpeaking,
-    isManualMode
+    isManualMode,
+    sessionId
   } = useVoice();
 
   // Navigation / Drawer State
@@ -153,9 +155,14 @@ function App() {
         </div>
       )}
 
-      {/* Top Bar / Logout */}
-      <div className="absolute top-10 right-6 z-50">
-        <LogoutButton onGuestExit={() => setIsGuest(false)} />
+      {/* Top Header */}
+      <div className="absolute top-6 left-6 right-6 z-50 flex items-center justify-between pointer-events-none">
+        <div className="pointer-events-auto px-4 flex items-center">
+          <FileUpload sessionId={sessionId} />
+        </div>
+        <div className="flex items-center gap-4 pointer-events-auto">
+          <LogoutButton onGuestExit={() => setIsGuest(false)} />
+        </div>
       </div>
 
       {/* Main Visualizer Area */}
@@ -248,6 +255,7 @@ function App() {
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
         history={history}
+        sessionId={sessionId}
       />
 
     </div>
