@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
 
+let lastMongoError = null;
+
 const connectDB = async () => {
     if (!process.env.MONGO_URI) {
-        console.error('CRITICAL: MONGO_URI environment variable is not set.');
+        lastMongoError = 'MONGO_URI environment variable is not set';
+        console.error('CRITICAL:', lastMongoError);
         return;
     }
     try {
@@ -10,12 +13,15 @@ const connectDB = async () => {
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
         });
+        lastMongoError = null;
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
-        // Do NOT call process.exit(1) in serverless — it kills the entire function instance.
-        // Routes will handle DB-unavailable scenarios gracefully with 503 responses.
+        lastMongoError = error.message;
         console.error(`MongoDB Connection Failed: ${error.message}`);
     }
 };
 
+const getLastMongoError = () => lastMongoError;
+
 module.exports = connectDB;
+module.exports.getLastMongoError = getLastMongoError;

@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 const { initGroq, generateResponse, handleToolOutput } = require('./groqService');
 const { executeCommand } = require('./commandDispatcher');
 const connectDB = require('./config/db');
+const { getLastMongoError } = require('./config/db');
 const { checkJwt } = require('./middleware/auth');
 const User = require('./models/User');
 const Conversation = require('./models/Conversation');
@@ -57,9 +58,12 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        mongoReadyState: mongoose.connection.readyState,
+        mongoError: getLastMongoError() || null,
         groqKeyPresent: !!process.env.GROQ_API_KEY,
         deepgramKeyPresent: !!process.env.DEEPGRAM_API_KEY,
         mongoUriPresent: !!process.env.MONGO_URI,
+        mongoUriHost: process.env.MONGO_URI ? process.env.MONGO_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : null,
         auth0Domain: process.env.AUTH0_DOMAIN || 'NOT SET',
         nodeEnv: process.env.NODE_ENV || 'NOT SET',
         timestamp: new Date().toISOString()
