@@ -23,11 +23,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Kick off the DB connection eagerly at module load (warm start reuse)
 connectDB().then(() => {
     // Drop the overly strict index if it exists to fix Guest Mode session swaps
     Conversation.collection.dropIndex('sessionId_1').catch(err => {
         // Ignored if index does not exist
     });
+}).catch(() => {
+    // Connection will be retried on the first route request
 });
 
 app.use(cors({
@@ -53,8 +56,9 @@ app.get('/', (req, res) => {
     res.send('Voice Agent Backend is running');
 });
 
-// Diagnostic health endpoint — check MongoDB and Groq config
-app.get('/api/health', (req, res) => {
+// Diagnostic health endpoint — await the DB connection so it reflects the real state
+app.get('/api/health', async (req, res) => {
+    try { await connectDB(); } catch (e) { /* error captured in getLastMongoError() */ }
     res.json({
         status: 'ok',
         mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
@@ -101,6 +105,7 @@ app.post('/api/uploadDocument', checkJwt, upload.single('file'), async (req, res
 app.post('/api/user/sync', checkJwt, async (req, res) => {
     if (!req.auth) return res.json({ message: "Guest Mode - No Sync Required" });
     try {
+        await connectDB();
         const auth0Id = req.auth.payload.sub;
         const { email, name, picture } = req.body;
         
@@ -131,6 +136,7 @@ app.post('/api/voice', checkJwt, async (req, res) => {
     }
 
     try {
+        await connectDB();
         let user = await User.findOne({ auth0Id });
         if (!user) {
             // Automatically create a document for Guests (or if the sync somehow failed for authenticated users)
