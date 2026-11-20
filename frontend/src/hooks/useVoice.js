@@ -22,6 +22,7 @@ export const useVoice = () => {
 
     const recognitionRef = useRef(null);
     const isIntentionalStop = useRef(false); // Track if we stopped it on purpose
+    const restartTimerRef = useRef(null);    // Track pending auto-restart so we can cancel it
 
     // Browser Support Check
     const browserSupportsSpeechRecognition = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -51,10 +52,11 @@ export const useVoice = () => {
             console.log("Mic stopped. Intentional:", isIntentionalStop.current);
             setListening(false);
 
-            // If we didn't stop it on purpose, restart after a short delay.
-            // Immediate restart causes a tight stop/start loop that makes the button flicker.
+            // If we didn't stop it on purpose, schedule a restart.
+            // Using a ref so the timer can be cancelled if the user manually clicks start first.
             if (!isIntentionalStop.current) {
-                setTimeout(() => {
+                restartTimerRef.current = setTimeout(() => {
+                    restartTimerRef.current = null;
                     if (!isIntentionalStop.current) {
                         console.log("Restarting mic...");
                         try {
@@ -99,6 +101,10 @@ export const useVoice = () => {
     }, []);
 
     const stopRecognition = () => {
+        if (restartTimerRef.current) {
+            clearTimeout(restartTimerRef.current); // Cancel any pending auto-restart
+            restartTimerRef.current = null;
+        }
         if (recognitionRef.current) {
             isIntentionalStop.current = true;
             recognitionRef.current.stop();
@@ -106,6 +112,10 @@ export const useVoice = () => {
     };
 
     const startRecognition = () => {
+        if (restartTimerRef.current) {
+            clearTimeout(restartTimerRef.current); // Cancel pending auto-restart before manual start
+            restartTimerRef.current = null;
+        }
         setTranscript("");
         isIntentionalStop.current = false;
         try {
