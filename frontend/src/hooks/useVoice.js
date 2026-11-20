@@ -51,14 +51,19 @@ export const useVoice = () => {
             console.log("Mic stopped. Intentional:", isIntentionalStop.current);
             setListening(false);
 
-            // If we didn't stop it on purpose, restart it
+            // If we didn't stop it on purpose, restart after a short delay.
+            // Immediate restart causes a tight stop/start loop that makes the button flicker.
             if (!isIntentionalStop.current) {
-                console.log("Restarting mic...");
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.error("Failed to auto-restart:", e);
-                }
+                setTimeout(() => {
+                    if (!isIntentionalStop.current) {
+                        console.log("Restarting mic...");
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.error("Failed to auto-restart:", e);
+                        }
+                    }
+                }, 300);
             }
         };
 
