@@ -59,7 +59,8 @@ Structure:
 
 const generateResponse = async (userText, history = [], isGuest = false, userId = null) => {
     if (!groq) {
-        throw new Error("Groq client not initialized");
+        // Re-throw so the route catches it and returns 500 with diagnostics — not a silent 200 fallback
+        throw new Error("Groq client not initialized. Check GROQ_API_KEY environment variable on Vercel.");
     }
 
     // Convert history from Gemini format to Groq/OpenAI format if needed

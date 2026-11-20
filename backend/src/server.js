@@ -6,6 +6,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const { initGroq, generateResponse, handleToolOutput } = require('./groqService');
 const { executeCommand } = require('./commandDispatcher');
 const connectDB = require('./config/db');
@@ -40,9 +41,8 @@ app.use(cors({
     credentials: false
 }));
 
-app.options('/api/voice', (req, res) => {
-    res.sendStatus(200);
-});
+// cors() middleware above handles OPTIONS preflights automatically.
+// Do NOT add a manual app.options() handler before cors() — it bypasses CORS headers.
 
 app.use(express.json());
 
@@ -50,6 +50,20 @@ initGroq(process.env.GROQ_API_KEY);
 
 app.get('/', (req, res) => {
     res.send('Voice Agent Backend is running');
+});
+
+// Diagnostic health endpoint — check MongoDB and Groq config
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        groqKeyPresent: !!process.env.GROQ_API_KEY,
+        deepgramKeyPresent: !!process.env.DEEPGRAM_API_KEY,
+        mongoUriPresent: !!process.env.MONGO_URI,
+        auth0Domain: process.env.AUTH0_DOMAIN || 'NOT SET',
+        nodeEnv: process.env.NODE_ENV || 'NOT SET',
+        timestamp: new Date().toISOString()
+    });
 });
 
 app.post('/api/uploadDocument', checkJwt, upload.single('file'), async (req, res) => {
