@@ -127,10 +127,9 @@ const generateResponse = async (userText, history = [], isGuest = false, userId 
 
         const completion = await groq.chat.completions.create({
             messages: validMessages,
-            model: "llama-3.3-70b-versatile",
+            model: "openai/gpt-oss-120b",
             temperature: 0.6,
             max_tokens: 1024,
-            response_format: { type: "json_object" },
         });
 
         const text = completion.choices[0]?.message?.content || "{}";
